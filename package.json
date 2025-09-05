@@ -1,0 +1,22 @@
+{
+  "devDependencies": {
+    "@types/node": "^24.3.1",
+    "typescript": "^5.9.2",
+    "vscode": "^1.1.37"
+  },
+  "name": "vs-links",
+  "version": "4.2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {},
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/feesh42/vs-links.git"
+  }
+}
