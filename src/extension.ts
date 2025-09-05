@@ -50,4 +50,5 @@ export function activate(context: vscode.ExtensionContext) {
   });
 }
 
+//test
 export function deactivate() {}
