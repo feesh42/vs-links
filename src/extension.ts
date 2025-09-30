@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 
-export function activate(_: vscode.ExtensionContext) {
-  console.log('Extension "git-push-notifier" is now active!');
+export function activate(context: vscode.ExtensionContext) {
+  console.log('Extension "git-push-open-remote" is active!');
+
   const gitExtension = vscode.extensions.getExtension<{
     getAPI(version: number): any;
   }>("vscode.git")?.exports;
@@ -13,45 +14,45 @@ export function activate(_: vscode.ExtensionContext) {
 
   const api = gitExtension.getAPI(1);
 
-  api.onDidRunGitCommand(async (e: any) => {
-    console.log(`Git command executed: ${e}`);
-    if (e.command === "push") {
-      const repo = e.repository;
-      if (!repo) return;
+  // Listen for push events
+  api.onDidPublish((e: any) => {
+    console.log("Detected git push event:", e);
+    const repo = e.repository;
+    if (!repo) return;
 
-      const branch = repo.state.HEAD?.name;
-      const remote = repo.state.HEAD?.upstream?.remote;
-      if (!branch || !remote) return;
+    const branch = e.branch || repo.state.HEAD?.name;
+    const remoteName = repo.state.HEAD?.upstream?.remote;
+    if (!branch || !remoteName) return;
 
-      let remoteUrl: string | undefined = repo.state.remotes.find(
-        (r: any) => r.name === remote
-      )?.fetchUrl;
-      if (!remoteUrl) return;
+    let remoteUrl = repo.state.remotes.find(
+      (r: any) => r.name === remoteName
+    )?.fetchUrl;
+    if (!remoteUrl) return;
 
-      // Normalize URL
-      if (remoteUrl.startsWith("git@")) {
-        // Convert SSH → HTTPS (GitHub/GitLab/Bitbucket)
-        remoteUrl = remoteUrl.replace("git@", "https://").replace(":", "/");
-      }
-      if (remoteUrl.endsWith(".git")) {
-        remoteUrl = remoteUrl.slice(0, -4);
-      }
-
-      // Try to build branch URL (only for known hosts)
-      let branchUrl = remoteUrl;
-      if (/github\.com|gitlab\.com|bitbucket\.org/.test(remoteUrl)) {
-        branchUrl += `/tree/${branch}`;
-      }
-
-      vscode.window
-        .showInformationMessage(`Pushed to ${remote}/${branch}`, "Open Remote")
-        .then((selection) => {
-          console.log(`User selected: ${selection}`);
-          if (selection === "Open Remote") {
-            vscode.env.openExternal(vscode.Uri.parse(branchUrl));
-          }
-        });
+    // Normalize SSH → HTTPS
+    if (remoteUrl.startsWith("git@")) {
+      remoteUrl = remoteUrl.replace("git@", "https://").replace(":", "/");
     }
+    if (remoteUrl.endsWith(".git")) {
+      remoteUrl = remoteUrl.slice(0, -4);
+    }
+
+    // Build branch URL for known hosts
+    let branchUrl = remoteUrl;
+    if (/github\.com|gitlab\.com|bitbucket\.org/.test(remoteUrl)) {
+      branchUrl += `/tree/${branch}`;
+    }
+
+    vscode.window
+      .showInformationMessage(
+        `Pushed to ${remoteName}/${branch}`,
+        "Open Remote"
+      )
+      .then((selection) => {
+        if (selection === "Open Remote") {
+          vscode.env.openExternal(vscode.Uri.parse(branchUrl));
+        }
+      });
   });
 }
 
