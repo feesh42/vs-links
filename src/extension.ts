@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
 export function activate(_: vscode.ExtensionContext) {
+  console.log('Extension "git-push-notifier" is now active!');
   const gitExtension = vscode.extensions.getExtension<{
     getAPI(version: number): any;
   }>("vscode.git")?.exports;
@@ -13,6 +14,7 @@ export function activate(_: vscode.ExtensionContext) {
   const api = gitExtension.getAPI(1);
 
   api.onDidRunGitCommand(async (e: any) => {
+    console.log(`Git command executed: ${e}`);
     if (e.command === "push") {
       const repo = e.repository;
       if (!repo) return;
@@ -44,6 +46,7 @@ export function activate(_: vscode.ExtensionContext) {
       vscode.window
         .showInformationMessage(`Pushed to ${remote}/${branch}`, "Open Remote")
         .then((selection) => {
+          console.log(`User selected: ${selection}`);
           if (selection === "Open Remote") {
             vscode.env.openExternal(vscode.Uri.parse(branchUrl));
           }
