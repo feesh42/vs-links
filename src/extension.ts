@@ -1,8 +1,6 @@
 import * as vscode from "vscode";
-import * as cp from "child_process";
 
-export function activate(context: vscode.ExtensionContext) {
-  // Git extension
+export function activate(_: vscode.ExtensionContext) {
   const gitExtension = vscode.extensions.getExtension<{
     getAPI(version: number): any;
   }>("vscode.git")?.exports;
@@ -14,31 +12,35 @@ export function activate(context: vscode.ExtensionContext) {
 
   const api = gitExtension.getAPI(1);
 
-  // Listen to push events
   api.onDidRunGitCommand(async (e: any) => {
     if (e.command === "push") {
       const repo = e.repository;
       if (!repo) return;
 
-      // Get current branch
       const branch = repo.state.HEAD?.name;
       const remote = repo.state.HEAD?.upstream?.remote;
       if (!branch || !remote) return;
 
-      // Get remote URL
-      const remoteUrl = repo.state.remotes.find(
+      let remoteUrl: string | undefined = repo.state.remotes.find(
         (r: any) => r.name === remote
       )?.fetchUrl;
       if (!remoteUrl) return;
 
-      // Convert to a clickable web URL if GitHub/GitLab
-      let branchUrl = remoteUrl;
-      if (branchUrl.endsWith(".git")) {
-        branchUrl = branchUrl.slice(0, -4);
+      // Normalize URL
+      if (remoteUrl.startsWith("git@")) {
+        // Convert SSH → HTTPS (GitHub/GitLab/Bitbucket)
+        remoteUrl = remoteUrl.replace("git@", "https://").replace(":", "/");
       }
-      branchUrl += `/tree/${branch}`;
+      if (remoteUrl.endsWith(".git")) {
+        remoteUrl = remoteUrl.slice(0, -4);
+      }
 
-      // Show notification
+      // Try to build branch URL (only for known hosts)
+      let branchUrl = remoteUrl;
+      if (/github\.com|gitlab\.com|bitbucket\.org/.test(remoteUrl)) {
+        branchUrl += `/tree/${branch}`;
+      }
+
       vscode.window
         .showInformationMessage(`Pushed to ${remote}/${branch}`, "Open Remote")
         .then((selection) => {
@@ -50,5 +52,4 @@ export function activate(context: vscode.ExtensionContext) {
   });
 }
 
-//test aa
 export function deactivate() {}
