@@ -48,6 +48,9 @@ function activate(_) {
             }
         });
     });
+    api.onDidCommit((e) => {
+        console.log("Detected git commit event:", e);
+    });
 }
 function deactivate() { }
 function getBrancUrl(pattern, project, branch) {
