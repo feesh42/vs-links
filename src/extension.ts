@@ -59,6 +59,10 @@ export function activate(_: vscode.ExtensionContext) {
         }
       });
   });
+
+  api.onDidCommit((e: any) => {
+    console.log("Detected git commit event:", e);
+  });
 }
 
 export function deactivate() {}
