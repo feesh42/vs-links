@@ -6,6 +6,7 @@ const vscode = require("vscode");
 const OPEN_IN_BROWSER = "View Branch";
 const CREATE_PR = "Create PR";
 function activate(_) {
+    console.info("VS Links extension is now active!");
     const gitExtension = vscode.extensions.getExtension("vscode.git")?.exports;
     if (!gitExtension) {
         vscode.window.showErrorMessage("Git extension not found.");
@@ -47,6 +48,9 @@ function activate(_) {
                 vscode.env.openExternal(vscode.Uri.parse(prUrl));
             }
         });
+    });
+    api.onDidCommit((e) => {
+        console.log("Detected git commit event:", e);
     });
 }
 function deactivate() { }
