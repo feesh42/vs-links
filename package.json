@@ -9,6 +9,7 @@
   "engines": {
     "vscode": "^1.85.0"
   },
+  "icon": "images/icon.png",
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./"
@@ -16,8 +17,25 @@
   "activationEvents": [
     "onStartupFinished"
   ],
+  "publisher": "Steve-RimJobs",
   "main": "./out/extension.js",
-  "contributes": {},
+  "contributes": {
+    "configuration": {
+      "title": "VS Links",
+      "properties": {
+        "vs-links.branchUrlPattern": {
+          "type": "string",
+          "default": "https://github.com/${project}/tree/${branch}",
+          "description": "URL pattern for the remote branch link."
+        },
+        "vs-links.prUrlPattern": {
+          "type": "string",
+          "default": "https://github.com/${project}/compare/${branch}...main",
+          "description": "URL pattern creating a PR from the branch link to main."
+        }
+      }
+    }
+  },
   "dependencies": {},
   "repository": {
     "type": "git",
