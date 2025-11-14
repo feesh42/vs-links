@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
 
-export function activate(context: vscode.ExtensionContext) {
-  console.log('Extension "git-push-open-remote" is active!');
+const OPEN_IN_BROWSER = "View Branch";
+const CREATE_PR = "Create PR";
 
+export function activate(_: vscode.ExtensionContext) {
   const gitExtension = vscode.extensions.getExtension<{
     getAPI(version: number): any;
   }>("vscode.git")?.exports;
@@ -20,40 +21,83 @@ export function activate(context: vscode.ExtensionContext) {
     const repo = e.repository;
     if (!repo) return;
 
-    const branch = e.branch || repo.state.HEAD?.name;
-    const remoteName = repo.state.HEAD?.upstream?.remote;
-    if (!branch || !remoteName) return;
+    const branch = e.branch ?? null;
+    const project = e?.repository?.rootUri?.path.split(/[/\\]/).pop() ?? null;
 
-    let remoteUrl = repo.state.remotes.find(
-      (r: any) => r.name === remoteName
-    )?.fetchUrl;
-    if (!remoteUrl) return;
+    const config = vscode.workspace.getConfiguration("vs-links");
+    const branchUrlPattern = config.get<string>("branchUrlPattern") || "";
+    const prUrlPattern = config.get<string>("prUrlPattern") || "";
 
-    // Normalize SSH → HTTPS
-    if (remoteUrl.startsWith("git@")) {
-      remoteUrl = remoteUrl.replace("git@", "https://").replace(":", "/");
-    }
-    if (remoteUrl.endsWith(".git")) {
-      remoteUrl = remoteUrl.slice(0, -4);
+    if (!project) {
+      vscode.window.showErrorMessage(
+        "Could not determine project name from repository."
+      );
+      return;
     }
 
-    // Build branch URL for known hosts
-    let branchUrl = remoteUrl;
-    if (/github\.com|gitlab\.com|bitbucket\.org/.test(remoteUrl)) {
-      branchUrl += `/tree/${branch}`;
+    // Attempt to build URLs from user patterns
+    let branchUrl = getBrancUrl(branchUrlPattern, project, branch);
+    let prUrl = getPrUrl(prUrlPattern, project, branch);
+
+    const options = [];
+
+    if (branchUrl) {
+      options.push(OPEN_IN_BROWSER);
+    }
+
+    if (prUrl) {
+      options.push(CREATE_PR);
     }
 
     vscode.window
-      .showInformationMessage(
-        `Pushed to ${remoteName}/${branch}`,
-        "Open Remote"
-      )
+      .showInformationMessage(`Pushed to ${branchUrl}`, ...options)
       .then((selection) => {
-        if (selection === "Open Remote") {
+        if (selection === OPEN_IN_BROWSER && branchUrl) {
           vscode.env.openExternal(vscode.Uri.parse(branchUrl));
+        } else if (selection === CREATE_PR && prUrl) {
+          vscode.env.openExternal(vscode.Uri.parse(prUrl));
         }
       });
   });
 }
 
 export function deactivate() {}
+
+function getBrancUrl(
+  pattern: string,
+  project: string,
+  branch: string
+): string | null {
+  if (!pattern) return null;
+  try {
+    const url = pattern
+      .replace("${project}", encodeURIComponent(project))
+      .replace("${branch}", encodeURIComponent(branch));
+    return url;
+  } catch (error) {
+    vscode.window.showWarningMessage(
+      "Branch URL pattern did not match. Please check your configuration." +
+        error
+    );
+    return null;
+  }
+}
+
+function getPrUrl(
+  pattern: string,
+  project: string,
+  branch: string
+): string | null {
+  if (!pattern) return null;
+  try {
+    const url = pattern
+      .replace("${project}", encodeURIComponent(project))
+      .replace("${branch}", encodeURIComponent(branch));
+    return url;
+  } catch (error) {
+    vscode.window.showWarningMessage(
+      "PR URL pattern did not match. Please check your configuration." + error
+    );
+    return null;
+  }
+}
